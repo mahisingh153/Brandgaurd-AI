@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BrandGuard AI | Check content before you publish</title>
+<meta name="description" content="Check every claim, term and tone in your draft against your brand's approved facts before it goes live.">
+<style>
+:root{
+  --bg:#F2F4F8; --surface:#FFFFFF; --ink:#14213D; --muted:#5B6578; --line:#D9DEE8;
+  --accent:#14213D; --accent-ink:#FFFFFF;
+  --bad:#B3261E; --bad-bg:#FBE4E2;
+  --warn:#8A5A00; --warn-bg:#FFF0CC;
+  --info:#3A4A66; --info-bg:#E4E9F2;
+  --good:#17694B; --good-bg:#DDF2E8;
+  --term:#6B2E8F; --term-bg:#F1E4F8;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0E1322; --surface:#161D31; --ink:#E8ECF5; --muted:#9AA6BF; --line:#2A3452;
+    --accent:#E8ECF5; --accent-ink:#0E1322;
+    --bad:#FF8A80; --bad-bg:#3A1B1B;
+    --warn:#F2C35B; --warn-bg:#3A2D0E;
+    --info:#AEBBD6; --info-bg:#222C46;
+    --good:#6FD4A4; --good-bg:#12332A;
+    --term:#D9A8F5; --term-bg:#33204A;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:16px 16px 64px}
+header{display:flex;align-items:center;gap:10px;padding:8px 0 14px}
+header svg{flex:none}
+header h1{font-size:20px;line-height:1.2;margin:0;letter-spacing:-.01em}
+header p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px}
+nav button{flex:1;border:0;background:transparent;color:var(--muted);font:600 15px/1 system-ui,sans-serif;padding:12px 8px;border-radius:9px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+:focus-visible{outline:3px solid #4C8DFF;outline-offset:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+h2{font-size:17px;margin:0 0 4px}
+.hint{color:var(--muted);font-size:14px;margin:0 0 12px}
+textarea,input[type=text],input[type=date],input[type=number]{width:100%;font:16px/1.5 system-ui,sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+textarea{min-height:170px;resize:vertical;font-family:Georgia,"Iowan Old Style",serif;line-height:1.6}
+label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 15px/1 system-ui,sans-serif;padding:12px 16px;border-radius:9px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{padding:9px 12px;font-size:14px}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.score{display:flex;align-items:center;gap:16px}
+.scorenum{font-size:52px;line-height:1;font-weight:700;letter-spacing:-.03em;min-width:92px}
+.scorebar{height:10px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:8px}
+.scorebar i{display:block;height:100%;border-radius:6px}
+.verdict{font-weight:700;font-size:17px}
+.sub{color:var(--muted);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{font-size:13px;font-weight:600;padding:4px 10px;border-radius:99px}
+.c-bad{background:var(--bad-bg);color:var(--bad)}
+.c-warn{background:var(--warn-bg);color:var(--warn)}
+.c-info{background:var(--info-bg);color:var(--info)}
+.c-term{background:var(--term-bg);color:var(--term)}
+.c-good{background:var(--good-bg);color:var(--good)}
+.draft{white-space:pre-wrap;font:17px/1.75 Georgia,"Iowan Old Style",serif;word-wrap:break-word}
+mark{background:transparent;color:inherit;cursor:pointer;border-radius:3px;padding:1px 0}
+mark.m-bad{background:var(--bad-bg);box-shadow:0 2px 0 var(--bad)}
+mark.m-term{background:var(--term-bg);box-shadow:0 2px 0 var(--term)}
+mark.m-warn{background:var(--warn-bg);box-shadow:0 2px 0 var(--warn)}
+mark.m-info{background:var(--info-bg);box-shadow:0 2px 0 var(--info)}
+.issue{border:1px solid var(--line);border-left-width:5px;border-radius:10px;padding:12px 14px;margin-top:10px;background:var(--surface)}
+.issue.i-bad{border-left-color:var(--bad)}
+.issue.i-warn{border-left-color:var(--warn)}
+.issue.i-info{border-left-color:var(--info)}
+.issue.i-term{border-left-color:var(--term)}
+.issue.flash{animation:flash 1.2s ease-out}
+@keyframes flash{from{background:var(--warn-bg)}to{background:var(--surface)}}
+@media (prefers-reduced-motion: reduce){.issue.flash{animation:none;background:var(--warn-bg)}}
+.issue .top{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px}
+.issue p{margin:4px 0}
+.quote{font-family:Georgia,serif;color:var(--muted);font-size:14px;border-left:2px solid var(--line);padding-left:10px;margin:6px 0}
+.evidence{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:14px;margin:8px 0}
+.evidence b{display:block;font-size:13px;color:var(--muted);font-weight:600}
+.empty{text-align:center;color:var(--muted);padding:24px 8px}
+.list-item{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.list-item:first-child{border-top:0}
+.list-item .meta{font-size:13px;color:var(--muted)}
+.stale{color:var(--warn);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+footer{color:var(--muted);font-size:13px;text-align:center;margin-top:24px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg width="38" height="38" viewBox="0 0 38 38" aria-hidden="true">
+      <path d="M19 3 33 8v10c0 8.5-5.6 14.4-14 17C10.6 32.400 5 26.500 5 18V8z" fill="var(--accent)"/>
+      <path d="m12.500 19 4.700 4.700L26 14.500" fill="none" stroke="var(--accent-ink)" stroke-width="3.200" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div>
+      <h1>BrandGuard AI</h1>
+      <p>Check facts, wording and tone before you publish.</p>
+    </div>
+  </header>
+
+  <nav role="tablist" aria-label="Sections">
+    <button role="tab" id="tab-check" aria-selected="true" aria-controls="view-check">Check content</button>
+    <button role="tab" id="tab-kb" aria-selected="false" aria-controls="view-kb">Brand knowledge</button>
+  </nav>
+
+  <!-- CHECK VIEW -->
+  <section id="view-check" role="tabpanel" aria-labelledby="tab-check">
+    <div class="card">
+      <h2>Your draft</h2>
+      <p class="hint">Paste a post, email or ad. We check every sentence against your brand knowledge.</p>
+      <textarea id="draft" placeholder="Paste your draft here, or load the sample to see how it works."></textarea>
+      <div class="row">
+        <button class="btn primary" id="btn-check">Check draft</button>
+        <button class="btn" id="btn-sample">Load sample</button>
+        <button class="btn" id="btn-clear">Clear</button>
+      </div>
+    </div>
+    <div id="results" aria-live="polite"></div>
+    <div id="empty" class="empty">Your report will appear here.</div>
+  </section>
+
+  <!-- KNOWLEDGE VIEW -->
+  <section id="view-kb" role="tabpanel" aria-labelledby="tab-kb" hidden>
+    <div class="card">
+      <h2>Approved facts</h2>
+      <p class="hint">Write each fact as one full sentence. Include the numbers and dates people must get right.</p>
+      <div id="facts"></div>
+      <label for="f-statement">New fact</label>
+      <textarea id="f-statement" style="min-height:70px" placeholder="Lumio Pro costs $12 per month."></textarea>
+      <div class="grid2">
+        <div><label for="f-source">Source document</label><input type="text" id="f-source" placeholder="Pricing sheet"></div>
+        <div><label for="f-date">Last verified</label><input type="date" id="f-date"></div>
+      </div>
+      <div class="row"><button class="btn primary small" id="btn-add-fact">Add fact</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Wording rules</h2>
+      <p class="hint">Words to avoid, and the approved wording to use instead. Leave the second box empty to ban a word.</p>
+      <div id="terms"></div>
+      <div class="grid2">
+        <div><label for="t-avoid">Avoid</label><input type="text" id="t-avoid" placeholder="cheap"></div>
+        <div><label for="t-use">Use instead</label><input type="text" id="t-use" placeholder="affordable"></div>
+      </div>
+      <div class="row"><button class="btn primary small" id="btn-add-term">Add rule</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Freshness limit</h2>
+      <p class="hint">Facts not verified within this many days are flagged as outdated.</p>
+      <input type="number" id="stale-days" min="1" max="3650" style="max-width:140px">
+      <div class="row"><button class="btn danger small" id="btn-reset">Reset to demo data</button></div>
+    </div>
+  </section>
+
+  <footer>Demo data is for a fictional app called Lumio. Replace it with your own brand knowledge.</footer>
+</div>
+
+<!-- ENGINE: no DOM access in this block -->
+<script id="engine">
+const DAY = 86400000;
+const STORE = 'brandguard.kb.v1';
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const daysAgoISO = n => new Date(Date.now() - n * DAY).toISOString().slice(0, 10);
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+function defaultKB() {
+  return {
+    staleDays: 90,
+    facts: [
+      { id: uid(), statement: 'Lumio Pro costs $12 per month.', source: 'Pricing sheet', verified: daysAgoISO(20) },
+      { id: uid(), statement: 'Lumio Free includes 5 notebooks.', source: 'Product spec', verified: daysAgoISO(20) },
+      { id: uid(), statement: 'The annual plan gives a 20% discount.', source: 'Pricing sheet', verified: daysAgoISO(25) },
+      { id: uid(), statement: 'Lumio offers a 14 day free trial.', source: 'Launch announcement', verified: daysAgoISO(210) },
+      { id: uid(), statement: 'Lumio was founded in 2019.', source: 'Company profile', verified: daysAgoISO(40) },
+      { id: uid(), statement: 'Lumio supports Android, iOS and web.', source: 'Product spec', verified: daysAgoISO(30) }
+    ],
+    terms: [
+      { id: uid(), avoid: 'cheap', use: 'affordable' },
+      { id: uid(), avoid: 'Lumio App', use: 'Lumio' },
+      { id: uid(), avoid: 'guaranteed', use: '' },
+      { id: uid(), avoid: 'revolutionary', use: '' }
+    ]
+  };
+}
+
+let KB = loadKB();
+function loadKB() {
+  try { const raw = localStorage.getItem(STORE); if (raw) return JSON.parse(raw); } catch (e) {}
+  return defaultKB();
+}
+function saveKB() { try { localStorage.setItem(STORE, JSON.stringify(KB)); } catch (e) {} }
+
+const STOP = new Set(('a an the and or but of to in on at for with by from is are was were be been it its this that these those ' +
+  'as per our we you your their his her they them just now get enjoy also can will has have had do does so if then than').split(' '));
+const stem = w => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) ? w.replace(/ies$/, 'y').replace(/s$/, '') : w;
+function toks(text) {
+  return new Set(text.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/)
+    .filter(w => w.length > 1 && !STOP.has(w)).map(stem));
+}
+
+const NUMRE = /(?:[$₹€£]|\brs\.?\s?)?\d[\d,]*(?:\.\d+)?(?:\s?%|[kKmM]\b)?/gi;
+function nums(text) {
+  const out = []; const re = new RegExp(NUMRE.source, 'gi'); let m;
+  while ((m = re.exec(text))) {
+    let raw = m[0];
+    while (raw.endsWith(',')) raw = raw.slice(0, -1);
+    const body = raw.replace(/^(?:[$₹€£]|rs\.?\s?)/i, '');
+    let val = parseFloat(body.replace(/,/g, ''));
+    if (isNaN(val)) continue;
+    if (/k$/i.test(body)) val *= 1000;
+    if (/m$/i.test(body)) val *= 1e6;
+    out.push({ raw, val, start: m.index, end: m.index + raw.length });
+  }
+  return out;
+}
+
+function sentences(text) {
+  const out = []; const re = /[^\n]+?(?:[.!?]+(?=\s|$)|$)/gm; let m;
+  while ((m = re.exec(text))) {
+    const lead = m[0].length - m[0].trimStart().length;
+    const t = m[0].trim();
+    if (t) out.push({ text: t, start: m.index + lead, end: m.index + lead + t.length });
+  }
+  return out;
+}
+
+const NEG = /\b(not|no|never|cannot|without)\b|n't/i;
+const ABSOLUTE = /\b(best|fastest|number one|leading|unbeatable|always|never)\b|#1/i;
+const esc_re = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const ageDays = iso => {
+  const t = new Date(iso + 'T00:00:00').getTime();
+  return isNaN(t) ? 0 : Math.max(0, Math.floor((Date.now() - t) / DAY));
+};
+const PENALTY = { Contradicted: 12, Wording: 6, Outdated: 8, Unverifiable: 5, Style: 3 };
+
+function runCheck(text) {
+  const issues = []; let claims = 0, verified = 0;
+
+  sentences(text).forEach(s => {
+    const sTok = toks(s.text);
+    const sNums = nums(s.text).map(n => ({ ...n, start: n.start + s.start, end: n.end + s.start }));
+    const matches = [];
+    KB.facts.forEach(f => {
+      const fTok = toks(f.statement);
+      if (!fTok.size) return;
+      const inter = [...fTok].filter(t => sTok.has(t)).length;
+      const ratio = inter / fTok.size;
+      if (inter >= 2 && ratio >= 0.5) matches.push({ f, ratio });
+    });
+    const known = matches.flatMap(m => nums(m.f.statement).map(n => n.val));
+
+    matches.forEach(({ f, ratio }) => {
+      claims++;
+      const fN = nums(f.statement);
+      const age = ageDays(f.verified);
+      let verdict = 'Supported', wrong = [];
+      if (fN.length && sNums.length) {
+        wrong = sNums.filter(n => !known.includes(n.val));
+        if (wrong.length) verdict = 'Contradicted';
+      }
+      const negMismatch = ratio >= 0.6 && NEG.test(s.text) !== NEG.test(f.statement);
+      if (negMismatch && verdict === 'Supported') verdict = 'Contradicted';
+      if (verdict === 'Supported' && age > KB.staleDays) verdict = 'Outdated';
+
+      const evidence = { statement: f.statement, source: f.source || 'Brand knowledge', age, factId: f.id };
+      if (verdict === 'Supported') { verified++; return; }
+
+      if (verdict === 'Contradicted') {
+        if (wrong.length) {
+          let reps = wrong.map(w => {
+            let target = null;
+            if (fN.length === 1) target = fN[0];
+            else if (sNums.length === fN.length) target = fN[sNums.indexOf(w)];
+            return target ? { start: w.start, end: w.end, text: target.raw } : null;
+          });
+          issues.push({
+            verdict, excerpt: s.text, evidence,
+            marks: wrong.map(w => ({ start: w.start, end: w.end })),
+            message: 'This says ' + wrong.map(w => w.raw).join(', ') + ' but the approved source says ' + fN.map(n => n.raw).join(', ') + '.',
+            fix: reps.every(Boolean) ? { type: 'replace', reps } : null
+          });
+        } else {
+          issues.push({
+            verdict, excerpt: s.text, evidence,
+            marks: [{ start: s.start, end: s.end }],
+            message: 'This sentence says the opposite of the approved fact.', fix: null
+          });
+        }
+      } else {
+        issues.push({
+          verdict, excerpt: s.text, evidence,
+          marks: [{ start: s.start, end: s.end }],
+          message: 'This matches the source, but the source was last verified ' + age + ' days ago (limit: ' + KB.staleDays + ' days). Confirm it is still true.',
+          fix: { type: 'verify', factId: f.id }
+        });
+      }
+    });
+
+    if (!matches.length) {
+      if (sNums.length) {
+        claims++;
+        issues.push({
+          verdict: 'Unverifiable', excerpt: s.text, evidence: null,
+          marks: [{ start: s.start, end: s.end }],
+          message: 'No approved fact covers the figures in this sentence (' + sNums.map(n => n.raw).join(', ') + '). Add a source or remove the claim.',
+          fix: null
+        });
+      } else if (ABSOLUTE.test(s.text)) {
+        claims++;
+        issues.push({
+          verdict: 'Unverifiable', excerpt: s.text, evidence: null,
+          marks: [{ start: s.start, end: s.end }],
+          message: 'This is an absolute claim with no approved source behind it.', fix: null
+        });
+      }
+    }
+  });
+
+  KB.terms.forEach(t => {
+    if (!t.avoid) return;
+    const re = new RegExp('\\b' + esc_re(t.avoid) + '\\b', 'gi'); let m;
+    while ((m = re.exec(text))) {
+      issues.push({
+        verdict: 'Wording', excerpt: null, evidence: null,
+        marks: [{ start: m.index, end: m.index + m[0].length }],
+        message: t.use ? 'Use "' + t.use + '" instead of "' + m[0] + '".' : '"' + m[0] + '" is not allowed in brand copy. Reword the sentence.',
+        fix: t.use ? { type: 'replace', reps: [{ start: m.index, end: m.index + m[0].length, text: t.use }] } : null
+      });
+    }
+  });
+
+  let m; const bang = /!{2,}/g;
+  while ((m = bang.exec(text))) issues.push({
+    verdict: 'Style', excerpt: null, evidence: null,
+    marks: [{ start: m.index, end: m.index + m[0].length }],
+    message: 'Use a single exclamation mark.',
+    fix: { type: 'replace', reps: [{ start: m.index, end: m.index + m[0].length, text: '!' }] }
+  });
+  const caps = /\b[A-Z]{4,}\b/g;
+  while ((m = caps.exec(text))) issues.push({
+    verdict: 'Style', excerpt: null, evidence: null,
+    marks: [{ start: m.index, end: m.index + m[0].length }],
+    message: '"' + m[0] + '" reads as shouting. Use normal capitalisation.',
+    fix: { type: 'replace', reps: [{ start: m.index, end: m.index + m[0].length, text: m[0][0] + m[0].slice(1).toLowerCase() }] }
+  });
+
+  issues.sort((a, b) => a.marks[0].start - b.marks[0].start);
+  issues.forEach((is, i) => { is.id = i; });
+  const score = Math.max(0, 100 - issues.reduce((sum, i) => sum + PENALTY[i.verdict], 0));
+  return { issues, score, claims, verified };
+}
+
+function applyReps(text, reps) {
+  let out = text, floor = Infinity;
+  [...reps].sort((a, b) => b.start - a.start).forEach(r => {
+    if (r.end > floor) return;
+    out = out.slice(0, r.start) + r.text + out.slice(r.end);
+    floor = r.start;
+  });
+  return out;
+}
+</script>
+
+<!-- UI -->
+<script id="ui">
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const SAMPLE = "Get Lumio Pro for just $10 per month, and it's cheap and guaranteed to boost your focus! Lumio Free includes 3 notebooks. Enjoy a 14 day free trial. Save 25% with the annual plan. Lumio was founded in 2019 and runs on Android, iOS and web. Download the Lumio App today.";
+const RANK = { Contradicted: 5, Wording: 4, Outdated: 3, Style: 2, Unverifiable: 2 };
+const MARK = { Contradicted: 'm-bad', Wording: 'm-term', Outdated: 'm-warn', Unverifiable: 'm-info', Style: 'm-info' };
+const CARD = { Contradicted: 'i-bad', Wording: 'i-term', Outdated: 'i-warn', Unverifiable: 'i-info', Style: 'i-info' };
+const CHIP = { Contradicted: 'c-bad', Wording: 'c-term', Outdated: 'c-warn', Unverifiable: 'c-info', Style: 'c-info' };
+const LABEL = { Contradicted: 'Wrong', Wording: 'Wording', Outdated: 'Outdated', Unverifiable: 'No source', Style: 'Style' };
+let current = { issues: [] };
+
+/* Tabs */
+function showTab(name) {
+  const check = name === 'check';
+  $('view-check').hidden = !check; $('view-kb').hidden = check;
+  $('tab-check').setAttribute('aria-selected', check); $('tab-kb').setAttribute('aria-selected', !check);
+  if (!check) renderKB();
+}
+$('tab-check').onclick = () => showTab('check');
+$('tab-kb').onclick = () => showTab('kb');
+
+/* Check flow */
+function check() {
+  const text = $('draft').value;
+  if (!text.trim()) { $('results').innerHTML = ''; $('empty').hidden = false; return; }
+  const r = runCheck(text);
+  current = r; $('empty').hidden = true;
+  $('results').innerHTML = renderReport(text, r);
+}
+
+function annotate(text, issues) {
+  const n = text.length, owner = new Array(n).fill(-1), rank = new Array(n).fill(0);
+  issues.forEach((is, idx) => {
+    const r = RANK[is.verdict];
+    is.marks.forEach(m => { for (let i = m.start; i < m.end && i < n; i++) if (r > rank[i]) { rank[i] = r; owner[i] = idx; } });
+  });
+  let html = '', i = 0;
+  while (i < n) {
+    let j = i; while (j < n && owner[j] === owner[i]) j++;
+    const seg = esc(text.slice(i, j));
+    if (owner[i] < 0) html += seg;
+    else { const is = issues[owner[i]]; html += '<mark class="' + MARK[is.verdict] + '" data-issue="' + is.id + '" tabindex="0" title="' + LABEL[is.verdict] + '">' + seg + '</mark>'; }
+    i = j;
+  }
+  return html;
+}
+
+function renderReport(text, r) {
+  const band = r.score >= 85 ? ['Ready to publish', 'var(--good)'] : r.score >= 60 ? ['Needs review', 'var(--warn)'] : ['Do not publish yet', 'var(--bad)'];
+  const counts = {}; r.issues.forEach(i => counts[i.verdict] = (counts[i.verdict] || 0) + 1);
+  let chips = Object.keys(counts).map(v => '<span class="chip ' + CHIP[v] + '">' + counts[v] + ' ' + LABEL[v].toLowerCase() + '</span>').join('');
+  if (r.verified) chips += '<span class="chip c-good">' + r.verified + ' fact' + (r.verified > 1 ? 's' : '') + ' verified</span>';
+  const fixable = r.issues.filter(i => i.fix && i.fix.type === 'replace').length;
+
+  let html = '<div class="card"><div class="score"><div class="scorenum" style="color:' + band[1] + '">' + r.score + '</div><div style="flex:1">' +
+    '<div class="verdict" style="color:' + band[1] + '">' + band[0] + '</div><div class="sub">Brand Trust Score out of 100</div>' +
+    '<div class="scorebar"><i style="width:' + r.score + '%;background:' + band[1] + '"></i></div></div></div>' +
+    '<div class="chips">' + chips + '</div></div>';
+
+  html += '<div class="card"><h2>Marked-up draft</h2><p class="hint">Tap a highlight to jump to its explanation.</p>' +
+    '<div class="draft" id="annotated">' + annotate(text, r.issues) + '</div>' +
+    '<div class="row">' +
+    (fixable ? '<button class="btn primary small" data-act="fixall">Apply ' + fixable + ' text fix' + (fixable > 1 ? 'es' : '') + '</button>' : '') +
+    '<button class="btn small" data-act="copy">Copy draft</button></div></div>';
+
+  if (!r.issues.length) {
+    html += '<div class="card empty" style="color:var(--good)"><b>No issues found.</b><br>Every claim we could match agrees with your approved facts.</div>';
+  } else {
+    html += '<div class="card"><h2>Issues to review</h2>';
+    r.issues.forEach(is => {
+      html += '<div class="issue ' + CARD[is.verdict] + '" id="issue-' + is.id + '">' +
+        '<div class="top"><span class="chip ' + CHIP[is.verdict] + '">' + LABEL[is.verdict] + '</span></div>' +
+        '<p>' + esc(is.message) + '</p>' +
+        (is.excerpt ? '<div class="quote">' + esc(is.excerpt) + '</div>' : '') +
+        (is.evidence ? '<div class="evidence"><b>Approved source: ' + esc(is.evidence.source) + '</b>' + esc(is.evidence.statement) +
+          '<br><span class="' + (is.verdict === 'Outdated' ? 'stale' : 'sub') + '">Verified ' + is.evidence.age + ' days ago</span></div>' : '') +
+        '<div class="row" style="margin-top:8px">' +
+        (is.fix && is.fix.type === 'replace' ? '<button class="btn primary small" data-act="fix" data-id="' + is.id + '">Apply fix</button>' : '') +
+        (is.fix && is.fix.type === 'verify' ? '<button class="btn primary small" data-act="verify" data-id="' + is.id + '">Mark source verified today</button>' : '') +
+        '</div></div>';
+    });
+    html += '</div>';
+  }
+  return html;
+}
+
+$('results').addEventListener('click', e => {
+  const mk = e.target.closest('mark[data-issue]');
+  if (mk) return focusIssue(mk.dataset.issue);
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const act = b.dataset.act, draft = $('draft');
+  if (act === 'fix') {
+    draft.value = applyReps(draft.value, current.issues[+b.dataset.id].fix.reps); check();
+  } else if (act === 'fixall') {
+    const reps = current.issues.filter(i => i.fix && i.fix.type === 'replace').flatMap(i => i.fix.reps);
+    draft.value = applyReps(draft.value, reps); check();
+  } else if (act === 'verify') {
+    const f = KB.facts.find(x => x.id === current.issues[+b.dataset.id].fix.factId);
+    if (f) { f.verified = todayISO(); saveKB(); } check();
+  } else if (act === 'copy') {
+    const done = () => { b.textContent = 'Copied'; setTimeout(() => b.textContent = 'Copy draft', 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(draft.value).then(done, () => { draft.select(); document.execCommand('copy'); done(); });
+    else { draft.select(); document.execCommand('copy'); done(); }
+  }
+});
+$('results').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { const mk = e.target.closest('mark[data-issue]'); if (mk) focusIssue(mk.dataset.issue); }
+});
+function focusIssue(id) {
+  const el = $('issue-' + id); if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+
+$('btn-check').onclick = check;
+$('btn-sample').onclick = () => { $('draft').value = SAMPLE; check(); };
+$('btn-clear').onclick = () => { $('draft').value = ''; check(); $('draft').focus(); };
+
+/* Knowledge base */
+function renderKB() {
+  $('facts').innerHTML = KB.facts.length ? KB.facts.map(f => {
+    const age = ageDays(f.verified), stale = age > KB.staleDays;
+    return '<div class="list-item"><div><div>' + esc(f.statement) + '</div><div class="meta">' + esc(f.source || 'No source') +
+      ' | verified ' + age + ' days ago' + (stale ? ' <span class="stale">(outdated)</span>' : '') + '</div></div>' +
+      '<button class="btn small danger" data-del-fact="' + f.id + '" aria-label="Delete fact">Delete</button></div>';
+  }).join('') : '<div class="empty">No facts yet. Add the first one below.</div>';
+  $('terms').innerHTML = KB.terms.length ? KB.terms.map(t =>
+    '<div class="list-item"><div>' + esc(t.avoid) + ' <span class="meta">' + (t.use ? 'use "' + esc(t.use) + '"' : 'not allowed') + '</span></div>' +
+    '<button class="btn small danger" data-del-term="' + t.id + '" aria-label="Delete rule">Delete</button></div>').join('') :
+    '<div class="empty">No wording rules yet.</div>';
+  $('stale-days').value = KB.staleDays;
+  if (!$('f-date').value) $('f-date').value = todayISO();
+}
+$('facts').addEventListener('click', e => {
+  const id = e.target.dataset.delFact; if (!id) return;
+  KB.facts = KB.facts.filter(f => f.id !== id); saveKB(); renderKB();
+});
+$('terms').addEventListener('click', e => {
+  const id = e.target.dataset.delTerm; if (!id) return;
+  KB.terms = KB.terms.filter(t => t.id !== id); saveKB(); renderKB();
+});
+$('btn-add-fact').onclick = () => {
+  const s = $('f-statement').value.trim(); if (!s) { $('f-statement').focus(); return; }
+  KB.facts.push({ id: uid(), statement: s, source: $('f-source').value.trim(), verified: $('f-date').value || todayISO() });
+  saveKB(); $('f-statement').value = ''; $('f-source').value = ''; renderKB();
+};
+$('btn-add-term').onclick = () => {
+  const a = $('t-avoid').value.trim(); if (!a) { $('t-avoid').focus(); return; }
+  KB.terms.push({ id: uid(), avoid: a, use: $('t-use').value.trim() });
+  saveKB(); $('t-avoid').value = ''; $('t-use').value = ''; renderKB();
+};
+$('stale-days').onchange = () => { const v = parseInt($('stale-days').value, 10); if (v > 0) { KB.staleDays = v; saveKB(); } };
+$('btn-reset').onclick = () => {
+  if (!confirm('Replace your brand knowledge with the demo data?')) return;
+  KB = defaultKB(); saveKB(); renderKB(); check();
+};
+</script>
+</body>
+</html>
